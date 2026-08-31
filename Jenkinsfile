@@ -2,33 +2,30 @@ pipeline {
     agent any
 
     tools {
-        // Matches the tool names configured in Manage Jenkins > Tools
         jdk 'Java-11'
         maven 'Maven-3'
     }
 
     environment {
-        // Restricts JVM heap usage to prevent crashes on t3.small instances
         MAVEN_OPTS = '-Xmx512m'
     }
 
     stages {
         stage('Compile Project') {
             steps {
-                // Compiles your Spring Boot 2.6.3 source code
                 sh 'mvn clean compile'
             }
         }
 
         stage('Checkstyle') {
             steps {
-                sh 'mvn checkstyle:check'
+                // Generates the report at target/site/checkstyle.html
+                sh 'mvn checkstyle:checkstyle'
             }
         }
 
         stage('Package Application') {
             steps {
-                // Generates the final fundoo-0.0.1-SNAPSHOT.jar file
                 sh 'mvn package -DskipTests'
             }
         }
@@ -36,8 +33,19 @@ pipeline {
 
     post {
         always {
-            // Saves the build artifact inside Jenkins history
-            archiveArtifacts artifacts: 'target/*.jar, target/checkstyle-result.xml', allowEmptyArchive: true
+            // Archives build artifacts
+            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+
+            // Publishes the HTML report in Jenkins UI
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'target/site',
+                reportFiles: 'checkstyle.html',
+                reportName: 'Checkstyle Report',
+                reportTitles: 'Checkstyle Analysis'
+            ])
         }
     }
 }
