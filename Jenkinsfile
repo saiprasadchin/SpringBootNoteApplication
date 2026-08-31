@@ -38,6 +38,7 @@ pipeline {
         always {
             // Saves the build artifact inside Jenkins history
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+            recordIssues tools: [checkStyle()]
         }
     }
 }
