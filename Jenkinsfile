@@ -20,6 +20,12 @@ pipeline {
             }
         }
 
+        stage('Checkstyle') {
+            steps {
+                sh 'mvn checkstyle:check'
+            }
+        }
+
         stage('Package Application') {
             steps {
                 // Generates the final fundoo-0.0.1-SNAPSHOT.jar file
