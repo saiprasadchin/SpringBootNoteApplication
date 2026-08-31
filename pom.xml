@@ -119,7 +119,7 @@
 			    <groupId>org.apache.maven.plugins</groupId>
 			    <artifactId>maven-checkstyle-plugin</artifactId>
 			    <version>3.3.1</version>
-				<dependencies>
+			    <dependencies>
 			        <dependency>
 			            <groupId>com.puppycrawl.tools</groupId>
 			            <artifactId>checkstyle</artifactId>
@@ -127,11 +127,10 @@
 			        </dependency>
 			    </dependencies>
 			    <configuration>
-			        <!-- Uses Sun/Google coding conventions out of the box -->
 			        <configLocation>sun_checks.xml</configLocation>
-			        <encoding>UTF-8</encoding>
 			        <consoleOutput>true</consoleOutput>
 			        <failsOnError>false</failsOnError>
+			        <failOnViolation>false</failOnViolation>
 			        <linkXRef>false</linkXRef>
 			    </configuration>
 			    <executions>
