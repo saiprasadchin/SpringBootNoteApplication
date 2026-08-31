@@ -116,6 +116,27 @@
 	<build>
 		<plugins>
 			<plugin>
+			    <groupId>com.github.spotbugs</groupId>
+			    <artifactId>spotbugs-maven-plugin</artifactId>
+			    <version>4.8.2.0</version>
+			    <configuration>
+			        <effort>Max</effort>
+			        <threshold>Low</threshold>
+			        <xmlOutput>true</xmlOutput>
+			        <!-- Generates the target/spotbugsXml.html file for Jenkins -->
+			        <htmlOutput>true</htmlOutput>
+			        <failOnError>false</failOnError>
+			    </configuration>
+			    <executions>
+			        <execution>
+			            <goals>
+			                <goal>check</goal>
+			            </goals>
+			        </execution>
+			    </executions>
+			</plugin>
+			
+			<plugin>
 			    <groupId>org.apache.maven.plugins</groupId>
 			    <artifactId>maven-checkstyle-plugin</artifactId>
 			    <version>3.3.1</version>
