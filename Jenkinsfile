@@ -13,13 +13,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Source Code') {
-            steps {
-                // Pulls code from your GitHub repository
-                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git'
-            }
-        }
-
         stage('Compile Project') {
             steps {
                 // Compiles your Spring Boot 2.6.3 source code
