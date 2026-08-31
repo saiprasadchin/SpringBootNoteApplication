@@ -57,8 +57,8 @@ pipeline {
                 keepAll: true,
                 reportDir: 'target',
                 reportFiles: 'spotbugsXml.html',
-                reportName: 'SpotBugs_Report',
-                reportTitles: 'SpotBugs_Analysis'
+                reportName: 'SpotBugsReport',
+                reportTitles: 'SpotBugs Analysis'
             ])
         }
     }
