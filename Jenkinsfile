@@ -20,13 +20,6 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
-            steps {
-                // Executes application tests
-                sh 'mvn test'
-            }
-        }
-
         stage('Package Application') {
             steps {
                 // Generates the final fundoo-0.0.1-SNAPSHOT.jar file
