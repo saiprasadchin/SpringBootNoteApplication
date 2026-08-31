@@ -24,6 +24,13 @@ pipeline {
             }
         }
 
+        stage('SpotBugs') {
+            steps {
+                // Inspects bytecode for Java bugs and generates HTML report at target/spotbugsXml.html
+                sh 'mvn spotbugs:spotbugs'
+            }
+        }
+
         stage('Package Application') {
             steps {
                 sh 'mvn package -DskipTests'
@@ -34,7 +41,7 @@ pipeline {
     post {
         always {
             // Archives build artifacts
-            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/*.jar, target/spotbugsXml.xml', allowEmptyArchive: true
 
             // Publishes the HTML report in Jenkins UI
             publishHTML(target: [
@@ -45,6 +52,16 @@ pipeline {
                 reportFiles: 'checkstyle.html',
                 reportName: 'Checkstyle Report',
                 reportTitles: 'Checkstyle Analysis'
+            ])
+
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'target',
+                reportFiles: 'spotbugsXml.html',
+                reportName: 'SpotBugs_Report',
+                reportTitles: 'SpotBugs_Analysis'
             ])
         }
     }
