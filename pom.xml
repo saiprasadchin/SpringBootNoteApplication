@@ -119,6 +119,13 @@
 			    <groupId>org.apache.maven.plugins</groupId>
 			    <artifactId>maven-checkstyle-plugin</artifactId>
 			    <version>3.3.1</version>
+				<dependencies>
+			        <dependency>
+			            <groupId>com.puppycrawl.tools</groupId>
+			            <artifactId>checkstyle</artifactId>
+			            <version>10.12.7</version>
+			        </dependency>
+			    </dependencies>
 			    <configuration>
 			        <!-- Uses Sun/Google coding conventions out of the box -->
 			        <configLocation>sun_checks.xml</configLocation>
