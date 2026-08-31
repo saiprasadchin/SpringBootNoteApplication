@@ -19,15 +19,14 @@ pipeline {
 
         stage('Checkstyle') {
             steps {
-                // Generates the report at target/site/checkstyle.html
                 sh 'mvn checkstyle:checkstyle'
             }
         }
 
         stage('SpotBugs') {
             steps {
-                // Inspects bytecode for Java bugs and generates HTML report at target/spotbugsXml.html
-                sh 'mvn spotbugs:spotbugs'
+                // Compiles bytecode and generates target/spotbugsXml.html
+                sh 'mvn test-compile spotbugs:spotbugs'
             }
         }
 
@@ -40,10 +39,8 @@ pipeline {
 
     post {
         always {
-            // Archives build artifacts
             archiveArtifacts artifacts: 'target/*.jar, target/spotbugsXml.xml', allowEmptyArchive: true
 
-            // Publishes the HTML report in Jenkins UI
             publishHTML(target: [
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
