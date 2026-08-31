@@ -37,8 +37,7 @@ pipeline {
     post {
         always {
             // Saves the build artifact inside Jenkins history
-            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
-            recordIssues tools: [checkStyle()]
+            archiveArtifacts artifacts: 'target/*.jar, target/checkstyle-result.xml', allowEmptyArchive: true
         }
     }
 }
