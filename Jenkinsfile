@@ -1,58 +1,46 @@
 pipeline {
     agent any
 
-    tools {
-        jdk 'Java-11'
-        maven 'Maven-3'
-    }
-
-    environment {
-        MAVEN_OPTS = '-Xmx512m'
-    }
-
     stages {
-        stage('Package Application') {
+        stage('Build App Image') {
             steps {
-                sh 'mvn clean package -DskipTests -Dcheckstyle.skip=true'
+                // Build local Docker image using the Dockerfile
+                sh 'docker build -t fundoo-app:latest .'
             }
         }
 
-        stage('Start App & OWASP ZAP Scan') {
+        stage('Run Container & OWASP ZAP Scan') {
             steps {
                 script {
-                    // 1. Clear port 8081
-                    sh 'fuser -k 8081/tcp || true'
+                    // Create a dedicated bridge network so containers communicate directly
+                    sh 'docker network create zap-net || true'
 
-                    // 2. Launch Spring Boot application in background with H2 in-memory DB
+                    // Start application container on the network
                     sh '''
-                        BUILD_ID=dontKillMe nohup java -jar target/fundoo-0.0.1-SNAPSHOT.jar \
-                          --server.port=8081 \
-                          --spring.datasource.url=jdbc:h2:mem:testdb \
-                          --spring.datasource.driver-class-name=org.h2.Driver \
-                          --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect > app.log 2>&1 &
+                        docker run -d \
+                          --name fundoo-container \
+                          --network zap-net \
+                          fundoo-app:latest
                     '''
 
-                    // 3. Health check loop (30-second timeout)
+                    // Healthcheck using Docker inspect / logs
                     sh '''
-                        echo "Waiting for Spring Boot app to start on port 8081..."
-                        timeout 30 bash -c 'until curl -s http://127.0.0.1:8081 > /dev/null; do sleep 2; done' || {
-                            echo "App failed to start! Printing app.log:"
-                            cat app.log
-                            exit 1
-                        }
+                        echo "Waiting for container to become healthy..."
+                        sleep 10
+                        docker logs fundoo-container
                     '''
 
-                    // 4. Execute OWASP ZAP Baseline Scan
+                    // Run OWASP ZAP container referencing the application container name
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh '''
                             chmod 777 $(pwd)
                             docker run --rm \
                               --user root \
-                              --network="host" \
+                              --network zap-net \
                               -v $(pwd):/zap/wrk/:rw \
                               ghcr.io/zaproxy/zaproxy:stable \
                               zap-baseline.py \
-                              -t http://127.0.0.1:8081 \
+                              -t http://fundoo-container:8081 \
                               -r zap-report.html \
                               -I || true
                         '''
@@ -61,8 +49,12 @@ pipeline {
             }
             post {
                 always {
-                    // 5. Cleanup running process
-                    sh 'fuser -k 8081/tcp || true'
+                    // Stop & remove test container and network
+                    sh '''
+                        docker stop fundoo-container || true
+                        docker rm fundoo-container || true
+                        docker network rm zap-net || true
+                    '''
 
                     publishHTML([
                         allowMissing: true,
@@ -80,7 +72,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar, app.log, zap-report.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'zap-report.html', allowEmptyArchive: true
         }
     }
 }
