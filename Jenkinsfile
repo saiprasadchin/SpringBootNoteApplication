@@ -32,10 +32,15 @@ pipeline {
 
         stage('Gitleaks Secret Scan') {
             steps {
-                // Scans git history and repository files for leaked secrets/tokens
+                // 1. Run Gitleaks scan to generate JSON report
                 sh 'gitleaks detect --source . --report-path target/gitleaks-report.json --report-format json --verbose || true'
-
-                sh 'npx gitleaks2html -i target/gitleaks-report.json -o target/gitleaks-report.html || true'
+        
+                // 2. Convert JSON report into HTML UI using npx
+                sh '''
+                    export NVM_DIR="/home/ec2-user/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                    npx --yes gitleaks2html -i target/gitleaks-report.json -o target/gitleaks-report.html || true
+                '''
             }
         }
         
@@ -79,6 +84,7 @@ pipeline {
                 reportName: 'Gitleaks Report',
                 reportTitles: 'Gitleaks Security Analysis'
             ])
+            
         }
     }
 }
