@@ -123,8 +123,9 @@
 			        <effort>Max</effort>
 			        <threshold>Low</threshold>
 			        <xmlOutput>true</xmlOutput>
-			        <!-- Generates the target/spotbugsXml.html file for Jenkins -->
 			        <htmlOutput>true</htmlOutput>
+			        <!-- Guarantees target/spotbugsXml.html is written directly to target/ -->
+			        <htmlOutputDirectory>${project.build.directory}</htmlOutputDirectory>
 			        <failOnError>false</failOnError>
 			    </configuration>
 			    <executions>
