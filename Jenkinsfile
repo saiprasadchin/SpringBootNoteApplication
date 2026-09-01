@@ -31,21 +31,33 @@ pipeline {
             }
         }
 
-        stage('OWASP Dependency Check') {
+        stage('OWASP ZAP Scan') {
             steps {
-                // Replace ./gradlew with Maven invocation
-                sh 'mvn org.owasp:dependency-check-maven:check'
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        sh '''
+                            # Mount current Jenkins workspace $(pwd) to container working directory /zap/wrk
+                            docker run --rm \
+                              -v $(pwd):/zap/wrk/:rw \
+                              -t ghcr.io/zaproxy/zaproxy:stable \
+                              zap-baseline.py \
+                              -t http://host.docker.internal:8081 \
+                              -r zap-report.html
+                        '''
+                    }
+                }
             }
             post {
                 always {
+                    // Publish generated HTML report to Jenkins UI
                     publishHTML([
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'target', // Maven outputs reports to target/, not build/reports/
-                        reportFiles: 'dependency-check-report.html',
-                        reportName: 'OWASP Dependency Report',
-                        reportTitles: 'OWASP Security Analysis'
+                        reportDir: '.',
+                        reportFiles: 'zap-report.html',
+                        reportName: 'OWASP ZAP Security Report',
+                        reportTitles: 'ZAP DAST Baseline Analysis'
                     ])
                 }
             }
