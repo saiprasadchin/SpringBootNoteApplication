@@ -30,6 +30,15 @@ pipeline {
             }
         }
 
+        stage('Gitleaks Secret Scan') {
+            steps {
+                // Scans git history and repository files for leaked secrets/tokens
+                sh 'gitleaks detect --source . --report-path target/gitleaks-report.json --report-format json --verbose || true'
+
+                sh 'npx gitleaks2html -i target/gitleaks-report.json -o target/gitleaks-report.html || true'
+            }
+        }
+        
         stage('Package Application') {
             steps {
                 sh 'mvn package -DskipTests'
@@ -39,7 +48,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar, target/spotbugsXml.xml', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/*.jar, target/spotbugsXml.xml, target/gitleaks-report.json', allowEmptyArchive: true
 
             publishHTML(target: [
                 allowMissing: true,
@@ -59,6 +68,16 @@ pipeline {
                 reportFiles: 'spotbugs.html',
                 reportName: 'SpotBugsReport',
                 reportTitles: 'SpotBugs Analysis'
+            ])
+
+            publishHTML(target: [
+                allowMissing: true,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'target',
+                reportFiles: 'gitleaks-report.html',
+                reportName: 'Gitleaks Report',
+                reportTitles: 'Gitleaks Security Analysis'
             ])
         }
     }
