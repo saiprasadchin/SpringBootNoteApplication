@@ -32,15 +32,17 @@ pipeline {
 
         stage('Gitleaks Secret Scan') {
             steps {
-                // 1. Run Gitleaks scan to generate JSON report
-                sh 'gitleaks detect --source . --report-path target/gitleaks-report.json --report-format json --verbose || true'
-        
-                // 2. Convert JSON report into HTML UI using npx
                 sh '''
+                    # Source NVM so node and gitleaks-secret-scanner are accessible to Jenkins
                     export NVM_DIR="/home/ec2-user/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
-                    npx --yes gitleaks2html -i target/gitleaks-report.json -o target/gitleaks-report.html || true
+        
+                    # Runs scan over history/repository and generates target/gitleaks-report.html
+                    gitleaks-secret-scanner --diff-mode history --html-report target/gitleaks-report.html || true
                 '''
+        
+                // Verification step for Jenkins Console logs
+                sh 'ls -la target/gitleaks-report.html'
             }
         }
         
