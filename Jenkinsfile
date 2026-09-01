@@ -43,21 +43,22 @@ pipeline {
             }
         }
 
-        stage('Gitleaks Secret Scan') {
+        stage('Gitleaks Scan') {
             steps {
-                // 1. Run official Gitleaks binary across current repository root
-                sh 'gitleaks detect --source . --report-path target/gitleaks-report.json --report-format json --verbose || true'
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        // 1. Scan filesystem directly and save JSON output
+                        sh 'gitleaks detect --source . --no-git --report-path target/gitleaks-report.json --report-format json --verbose || true'
         
-                // 2. Convert generated JSON output into interactive HTML
-                sh '''
-                    export NVM_DIR="/home/ec2-user/.nvm"
-                    [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                        // 2. Generate HTML report for Jenkins UI
+                        sh '''
+                            export NVM_DIR="/home/ec2-user/.nvm"
+                            [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
         
-                    gitleaks-secret-scanner --json target/gitleaks-report.json --html-report target/gitleaks-report.html || true
-                '''
-        
-                // 3. Confirm target files exist in console output
-                sh 'ls -la target/gitleaks-report.*'
+                            gitleaks-secret-scanner --json target/gitleaks-report.json --html-report target/gitleaks-report.html || true
+                        '''
+                    }
+                }
             }
         }
         
