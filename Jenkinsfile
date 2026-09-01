@@ -33,19 +33,16 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                sh '''
-                    ./gradlew dependencyCheckAnalyze
-                '''
-                // For Maven, replace with: ./mvnw org.owasp:dependency-check-maven:check
+                // Replace ./gradlew with Maven invocation
+                sh 'mvn org.owasp:dependency-check-maven:check'
             }
             post {
                 always {
-                    // Publishes the HTML report in Jenkins build artifact view
                     publishHTML([
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'build/reports', // Maven path: 'target'
+                        reportDir: 'target', // Maven outputs reports to target/, not build/reports/
                         reportFiles: 'dependency-check-report.html',
                         reportName: 'OWASP Dependency Report',
                         reportTitles: 'OWASP Security Analysis'
