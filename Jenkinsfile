@@ -26,7 +26,7 @@ pipeline {
         stage('SpotBugs') {
             steps {
                 // Compiles bytecode and generates target/spotbugsXml.html
-                sh 'mvn test-compile spotbugs:spotbugs'
+                sh 'mvn test-compile spotbugs:spotbugs -Dspotbugs.htmlOutput=true'
             }
         }
 
