@@ -11,78 +11,38 @@ pipeline {
     }
 
     stages {
-        stage('Compile Project') {
-            steps {
-                sh 'mvn clean compile'
-            }
-        }
-
-        stage('Checkstyle') {
-            steps {
-                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false -Dcheckstyle.failOnViolation=false || true'
-            }
-        }
-
-        stage('SpotBugs') {
-            steps {
-                sh 'mvn test-compile spotbugs:spotbugs -Dspotbugs.htmlOutput=true -Dcheckstyle.skip=true || true'
-            }
-        }
-
-        stage('Package Application') {
-            steps {
-                sh 'mvn package -DskipTests -Dcheckstyle.skip=true'
-            }
-        }
-
-        stage('Start App & OWASP ZAP Scan') {
+        stage('Debug ZAP Scan') {
             steps {
                 script {
-                    // 1. Kill any existing process on port 8081
-                    sh 'fuser -k 8081/tcp || true'
-
-                    // 2. Start Spring Boot app in background
-                    sh 'nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &'
-
-                    // 3. Wait until app responds on 8081 (timeout after 30s)
                     sh '''
-                        echo "Waiting for Spring Boot to start..."
-                        timeout 30 bash -c 'until curl -s http://localhost:8081 > /dev/null; do sleep 2; done' || true
+                        echo "=== 1. SYSTEM & ENVIRONMENT INFO ==="
+                        pwd
+                        whoami
+                        docker --version
+                        
+                        echo "=== 2. CHECK IF PORT 8081 IS RESPONDING ==="
+                        curl -Iv http://host.docker.internal:8081 || echo "CRITICAL: Cannot connect to port 8081 from host!"
+
+                        echo "=== 3. PREPARE WORKSPACE PERMISSIONS ==="
+                        chmod 777 $(pwd)
+                        touch $(pwd)/zap-report.html
+                        chmod 666 $(pwd)/zap-report.html
+
+                        echo "=== 4. RUNNING OWASP ZAP SCAN ==="
+                        docker run --rm \
+                          --user root \
+                          -w /zap/wrk \
+                          --add-host=host.docker.internal:host-gateway \
+                          -v $(pwd):/zap/wrk/:rw \
+                          ghcr.io/zaproxy/zaproxy:stable \
+                          zap-baseline.py \
+                          -t http://host.docker.internal:8081 \
+                          -r zap-report.html \
+                          -I || echo "ZAP scan finished with non-zero exit code (Expected if issues found)"
+
+                        echo "=== 5. VERIFY REPORT CREATION ==="
+                        ls -la $(pwd)/zap-report.html
                     '''
-
-                    // 4. Run ZAP Docker scan safely
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        sh '''
-                            chmod 777 $(pwd)
-                            docker run --rm \
-                              --user root \
-                              -w /zap/wrk \
-                              --add-host=host.docker.internal:host-gateway \
-                              -v $(pwd):/zap/wrk/:rw \
-                              ghcr.io/zaproxy/zaproxy:stable \
-                              zap-baseline.py \
-                              -t http://host.docker.internal:8081 \
-                              -r zap-report.html \
-                              -I || true
-                        '''
-                    }
-                }
-            }
-            post {
-                always {
-                    // 5. Clean up Spring Boot process
-                    sh 'fuser -k 8081/tcp || true'
-
-                    // 6. Publish Report
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'zap-report.html',
-                        reportName: 'OWASP ZAP Security Report',
-                        reportTitles: 'ZAP DAST Baseline Analysis'
-                    ])
                 }
             }
         }
@@ -90,26 +50,16 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.sarif, target/*.html, target/site/*.html, app.log, zap-report.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'zap-report.html, app.log', allowEmptyArchive: true
 
             publishHTML(target: [
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
-                reportDir: 'target/site',
-                reportFiles: 'checkstyle.html',
-                reportName: 'Checkstyle Report',
-                reportTitles: 'Checkstyle Analysis'
-            ])
-
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'target',
-                reportFiles: 'spotbugs.html',
-                reportName: 'SpotBugs Report',
-                reportTitles: 'SpotBugs Analysis'
+                reportDir: '.',
+                reportFiles: 'zap-report.html',
+                reportName: 'OWASP ZAP Security Report',
+                reportTitles: 'ZAP DAST Baseline Analysis'
             ])
         }
     }
