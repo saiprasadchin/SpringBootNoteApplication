@@ -116,6 +116,15 @@
 	<build>
 		<plugins>
 			<plugin>
+			    <groupId>org.owasp</groupId>
+			    <artifactId>dependency-check-maven</artifactId>
+			    <version>9.0.9</version>
+			    <configuration>
+			        <failBuildOnCVSS>7.0</failBuildOnCVSS>
+			        <format>ALL</format>
+			    </configuration>
+			</plugin>
+			<plugin>
 			    <groupId>com.github.spotbugs</groupId>
 			    <artifactId>spotbugs-maven-plugin</artifactId>
 			    <version>4.8.2.0</version>
