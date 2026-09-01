@@ -23,8 +23,14 @@ pipeline {
                     // 1. Clear port 8081
                     sh 'fuser -k 8081/tcp || true'
 
-                    // 2. Launch Spring Boot application in background
-                    sh 'BUILD_ID=dontKillMe nohup java -jar target/fundoo-0.0.1-SNAPSHOT.jar --server.port=8081 > app.log 2>&1 &'
+                    // 2. Launch Spring Boot application in background with H2 in-memory DB
+                    sh '''
+                        BUILD_ID=dontKillMe nohup java -jar target/fundoo-0.0.1-SNAPSHOT.jar \
+                          --server.port=8081 \
+                          --spring.datasource.url=jdbc:h2:mem:testdb \
+                          --spring.datasource.driver-class-name=org.h2.Driver \
+                          --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect > app.log 2>&1 &
+                    '''
 
                     // 3. Health check loop (30-second timeout)
                     sh '''
