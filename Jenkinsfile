@@ -33,16 +33,12 @@ pipeline {
         stage('Gitleaks Secret Scan') {
             steps {
                 sh '''
-                    # Source NVM so node and gitleaks-secret-scanner are accessible to Jenkins
                     export NVM_DIR="/home/ec2-user/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
         
-                    # Runs scan over history/repository and generates target/gitleaks-report.html
-                    gitleaks-secret-scanner --diff-mode history --html-report target/gitleaks-report.html || true
+                    # Pass '.' explicitly so it scans current repository files
+                    gitleaks-secret-scanner --path . --html-report target/gitleaks-report.html || true
                 '''
-        
-                // Verification step for Jenkins Console logs
-                sh 'ls -la target/gitleaks-report.html'
             }
         }
         
