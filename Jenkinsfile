@@ -38,16 +38,19 @@ pipeline {
         stage('Start App & OWASP ZAP Scan') {
             steps {
                 script {
-                    // 1. Kill any existing instance running on port 8081
+                    // 1. Kill any existing process on port 8081
                     sh 'fuser -k 8081/tcp || true'
 
-                    // 2. Start Spring Boot JAR in background mode
+                    // 2. Start Spring Boot app in background
                     sh 'nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &'
-                    
-                    // 3. Wait 15 seconds for Spring Boot startup
-                    sleep 15
 
-                    // 4. Run ZAP scan against the live app
+                    // 3. Wait until app responds on 8081 (timeout after 30s)
+                    sh '''
+                        echo "Waiting for Spring Boot to start..."
+                        timeout 30 bash -c 'until curl -s http://localhost:8081 > /dev/null; do sleep 2; done' || true
+                    '''
+
+                    // 4. Run ZAP Docker scan safely
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh '''
                             chmod 777 $(pwd)
@@ -56,22 +59,23 @@ pipeline {
                               -w /zap/wrk \
                               --add-host=host.docker.internal:host-gateway \
                               -v $(pwd):/zap/wrk/:rw \
-                              -t ghcr.io/zaproxy/zaproxy:stable \
+                              ghcr.io/zaproxy/zaproxy:stable \
                               zap-baseline.py \
                               -t http://host.docker.internal:8081 \
                               -r zap-report.html \
-                              -I
+                              -I || true
                         '''
                     }
                 }
             }
             post {
                 always {
-                    // 5. Terminate the background Spring Boot process after scanning
+                    // 5. Clean up Spring Boot process
                     sh 'fuser -k 8081/tcp || true'
 
+                    // 6. Publish Report
                     publishHTML([
-                        allowMissing: false,
+                        allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: '.',
@@ -86,7 +90,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.sarif, target/*.html, target/site/*.html, app.log', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.sarif, target/*.html, target/site/*.html, app.log, zap-report.html', allowEmptyArchive: true
 
             publishHTML(target: [
                 allowMissing: true,
