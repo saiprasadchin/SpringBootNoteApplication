@@ -5,8 +5,8 @@ COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests -Dcheckstyle.skip=true
 
-# Step 2: Runtime stage
-FROM openjdk:11-jre-slim
+# Step 2: Runtime stage (using maintained Eclipse Temurin image)
+FROM eclipse-temurin:11-jre
 WORKDIR /app
 COPY --from=build /app/target/fundoo-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8081
