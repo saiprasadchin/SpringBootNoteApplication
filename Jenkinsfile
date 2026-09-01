@@ -13,7 +13,6 @@ pipeline {
     stages {
         stage('Package Application') {
             steps {
-                // Skip tests and Checkstyle violations to allow packaging
                 sh 'mvn clean package -DskipTests -Dcheckstyle.skip=true'
             }
         }
@@ -21,19 +20,23 @@ pipeline {
         stage('Start App & OWASP ZAP Scan') {
             steps {
                 script {
-                    // 1. Kill any existing instance running on port 8081
+                    // 1. Clear port 8081
                     sh 'fuser -k 8081/tcp || true'
 
-                    // 2. Start Spring Boot JAR in background mode
-                    sh 'nohup java -jar target/*.jar --server.port=8081 > app.log 2>&1 &'
+                    // 2. Launch Spring Boot application in background
+                    sh 'BUILD_ID=dontKillMe nohup java -jar target/fundoo-0.0.1-SNAPSHOT.jar --server.port=8081 > app.log 2>&1 &'
 
-                    // 3. Health check on local port (Host check)
+                    // 3. Health check loop (30-second timeout)
                     sh '''
                         echo "Waiting for Spring Boot app to start on port 8081..."
-                        timeout 30 bash -c 'until curl -s http://127.0.0.1:8081 > /dev/null; do sleep 2; done' || echo "App failed to start!"
+                        timeout 30 bash -c 'until curl -s http://127.0.0.1:8081 > /dev/null; do sleep 2; done' || {
+                            echo "App failed to start! Printing app.log:"
+                            cat app.log
+                            exit 1
+                        }
                     '''
 
-                    // 4. Run ZAP scan using --network="host" for direct host access
+                    // 4. Execute OWASP ZAP Baseline Scan
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh '''
                             chmod 777 $(pwd)
@@ -52,7 +55,7 @@ pipeline {
             }
             post {
                 always {
-                    // 5. Terminate background Spring Boot app
+                    // 5. Cleanup running process
                     sh 'fuser -k 8081/tcp || true'
 
                     publishHTML([
