@@ -31,29 +31,22 @@ pipeline {
 
         stage('Checkstyle') {
             steps {
-                // Generate checkstyle HTML report via Maven site target
-                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false -Dcheckstyle.skip=false || true'
+                // Generates target/site/checkstyle.html
+                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false || true'
             }
         }
 
         stage('SpotBugs') {
             steps {
-                // Force HTML report generation for Jenkins publishing
-                sh 'mvn spotbugs:spotbugs -Dspotbugs.htmlOutput=true -Dspotbugs.outputDirectory=target -Dcheckstyle.skip=true || true'
+                // Generates target/spotbugs.html
+                sh 'mvn test-compile spotbugs:spotbugs -Dspotbugs.htmlOutput=true -Dcheckstyle.skip=true || true'
             }
         }
 
         stage('Gitleaks Scan') {
             steps {
-                // Generate BOTH JSON (for HTML rendering) and JUnit XML
-                sh '''
-                    gitleaks detect --source . --no-git --exit-code 0 --report-path target/gitleaks-report.json --report-format json --verbose || true
-                    
-                    # Convert JSON to a clean standalone HTML file
-                    echo "<html><head><title>Gitleaks</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px}th{background:#333;color:#fff}</style></head><body><h2>Gitleaks Report</h2>" > target/gitleaks-report.html
-                    jq -r 'if length == 0 then "<p>No leaks detected.</p>" else "<table><tr><th>Rule</th><th>File</th><th>Line</th><th>Match</th></tr>" + (.[] | "<tr><td>\(.RuleID)</td><td>\(.File)</td><td>\(.StartLine)</td><td><code>\(.Match)</code></td></tr>") + "</table>" end' target/gitleaks-report.json >> target/gitleaks-report.html
-                    echo "</body></html>" >> target/gitleaks-report.html
-                '''
+                // Option A: Keep JUnit format (shows under Jenkins Native "Test Result" tab)
+                sh 'gitleaks detect --source . --no-git --exit-code 0 --report-path target/gitleaks-report.xml --report-format junit --verbose || true'
             }
         }
         
@@ -66,8 +59,9 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.json, target/*.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.html, target/site/*.html', allowEmptyArchive: true
 
+            // 1. Checkstyle HTML Tab
             publishHTML(target: [
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
@@ -78,25 +72,19 @@ pipeline {
                 reportTitles: 'Checkstyle Analysis'
             ])
 
+            // 2. SpotBugs HTML Tab (Fixed filename target to spotbugs.html)
             publishHTML(target: [
                 allowMissing: true,
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
                 reportDir: 'target',
-                reportFiles: 'spotbugsXml.html',
+                reportFiles: 'spotbugs.html',
                 reportName: 'SpotBugs Report',
                 reportTitles: 'SpotBugs Analysis'
             ])
 
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'target',
-                reportFiles: 'gitleaks-report.html',
-                reportName: 'Gitleaks Report',
-                reportTitles: 'Gitleaks Security Analysis'
-            ])
+            // 3. Gitleaks Security Tab (Parsed natively via JUnit)
+            junit allowEmptyResults: true, testResults: 'target/gitleaks-report.xml'
         }
     }
 }
