@@ -45,19 +45,13 @@ pipeline {
 
         stage('Gitleaks Scan') {
             steps {
-                script {
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        // 1. Scan filesystem directly and save JSON output
-                        sh 'gitleaks detect --source . --no-git --report-path target/gitleaks-report.json --report-format json --verbose || true'
-        
-                        // 2. Generate HTML report for Jenkins UI
-                        sh '''
-                            export NVM_DIR="/home/ec2-user/.nvm"
-                            [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
-        
-                            gitleaks-secret-scanner --json target/gitleaks-report.json --html-report target/gitleaks-report.html || true
-                        '''
-                    }
+                // Run Gitleaks producing a JUnit XML report
+                sh 'gitleaks detect --source . --no-git --exit-code 0 --report-path target/gitleaks-report.xml --report-format junit --verbose'
+            }
+            post {
+                always {
+                    // Native Jenkins plugin parses and displays security leaks as test results
+                    junit allowEmptyResults: true, testResults: 'target/gitleaks-report.xml'
                 }
             }
         }
