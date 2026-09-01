@@ -45,15 +45,18 @@ pipeline {
 
         stage('Gitleaks Secret Scan') {
             steps {
-                // Runs scan using full history and workspace files
+                // 1. Run official Gitleaks binary over the root directory
+                sh 'gitleaks detect --source . --report-path target/gitleaks-report.json --report-format json --verbose || true'
+        
+                // 2. Convert JSON report into HTML UI
                 sh '''
                     export NVM_DIR="/home/ec2-user/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
-
-                    gitleaks-secret-scanner --diff-mode all --html-report target/gitleaks-report.html || true
+        
+                    npx gitleaks-secret-scanner --json-report target/gitleaks-report.json --html-report target/gitleaks-report.html || true
                 '''
-                
-                // Print check to verify target/gitleaks-report.html creation
+        
+                // 3. Verify file creation
                 sh 'ls -la target/gitleaks-report.html'
             }
         }
