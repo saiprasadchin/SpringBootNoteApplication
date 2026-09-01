@@ -36,8 +36,10 @@ pipeline {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh '''
-                            # Mount current Jenkins workspace $(pwd) to container working directory /zap/wrk
+                            # Ensure container runs as root and resolves host gateway
                             docker run --rm \
+                              --user root \
+                              --add-host=host.docker.internal:host-gateway \
                               -v $(pwd):/zap/wrk/:rw \
                               -t ghcr.io/zaproxy/zaproxy:stable \
                               zap-baseline.py \
@@ -49,7 +51,6 @@ pipeline {
             }
             post {
                 always {
-                    // Publish generated HTML report to Jenkins UI
                     publishHTML([
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
