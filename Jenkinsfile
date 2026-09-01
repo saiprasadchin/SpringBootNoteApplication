@@ -11,6 +11,19 @@ pipeline {
     }
 
     stages {
+        stage('Checkout Code') {
+            steps {
+                // Perform full checkout without shallow clone depth restriction
+                checkout([
+                    $class: 'GitSCM',
+                    branches: scm.branches,
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [[$class: 'CloneOption', depth: 0, noTags: false, shallow: false]],
+                    userRemoteConfigs: scm.userRemoteConfigs
+                ])
+            }
+        }
+        
         stage('Compile Project') {
             steps {
                 sh 'mvn clean compile'
@@ -32,13 +45,16 @@ pipeline {
 
         stage('Gitleaks Secret Scan') {
             steps {
+                // Runs scan using full history and workspace files
                 sh '''
                     export NVM_DIR="/home/ec2-user/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
-        
-                    # Pass '.' explicitly so it scans current repository files
-                    gitleaks-secret-scanner --path . --html-report target/gitleaks-report.html || true
+
+                    gitleaks-secret-scanner --diff-mode all --html-report target/gitleaks-report.html || true
                 '''
+                
+                // Print check to verify target/gitleaks-report.html creation
+                sh 'ls -la target/gitleaks-report.html'
             }
         }
         
