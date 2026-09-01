@@ -31,7 +31,8 @@ pipeline {
 
         stage('Checkstyle') {
             steps {
-                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false || true'
+                // Generates report and allows pipeline to proceed even if violations exist
+                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false -Dcheckstyle.failOnViolation=false || true'
             }
         }
 
