@@ -29,12 +29,12 @@ pipeline {
             }
         }
 
-        stage('Checkstyle') {
-            steps {
-                // Generates report and allows pipeline to proceed even if violations exist
-                sh 'mvn checkstyle:checkstyle site -DgenerateReports=false -Dcheckstyle.failOnViolation=false || true'
-            }
-        }
+        // stage('Checkstyle') {
+        //     steps {
+        //         // Generates report and allows pipeline to proceed even if violations exist
+        //         sh 'mvn checkstyle:checkstyle site -DgenerateReports=false -Dcheckstyle.failOnViolation=false || true'
+        //     }
+        // }
 
         stage('SpotBugs') {
             steps {
@@ -69,15 +69,15 @@ pipeline {
         always {
             archiveArtifacts artifacts: 'target/*.jar, target/*.xml, target/*.sarif, target/*.html, target/site/*.html', allowEmptyArchive: true
 
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'target/site',
-                reportFiles: 'checkstyle.html',
-                reportName: 'Checkstyle Report',
-                reportTitles: 'Checkstyle Analysis'
-            ])
+            // publishHTML(target: [
+            //     allowMissing: true,
+            //     alwaysLinkToLastBuild: true,
+            //     keepAll: true,
+            //     reportDir: 'target/site',
+            //     reportFiles: 'checkstyle.html',
+            //     reportName: 'Checkstyle Report',
+            //     reportTitles: 'Checkstyle Analysis'
+            // ])
 
             publishHTML(target: [
                 allowMissing: true,
