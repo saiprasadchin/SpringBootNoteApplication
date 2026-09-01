@@ -56,7 +56,7 @@ pipeline {
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
                 reportDir: 'target',
-                reportFiles: 'spotbugsXml.html',
+                reportFiles: 'spotbugs.html',
                 reportName: 'SpotBugsReport',
                 reportTitles: 'SpotBugs Analysis'
             ])
