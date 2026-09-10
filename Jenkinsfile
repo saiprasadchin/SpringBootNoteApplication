@@ -8,6 +8,7 @@ pipeline {
 
     environment {
         MAVEN_OPTS = '-Xmx512m'
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'
     }
 
     stages {
