@@ -1,10 +1,10 @@
 pipeline {
     agent any
 
-    tools {
-        jdk 'Java-11'
-        maven 'Maven-3'
-    }
+    // tools {
+    //     jdk 'Java-11'
+    //     maven 'Maven-3'
+    // }
 
     environment {
         MAVEN_OPTS = '-Xmx512m'
